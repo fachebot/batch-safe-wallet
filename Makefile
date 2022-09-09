@@ -6,8 +6,9 @@ tools:
 	add-apt-repository -y ppa:ethereum/ethereum
 	apt-get update -y
 	apt-get install ethereum -y
-	apt-get install python-pip3
+	apt-get install python3-pip -y
 	pip3 install solc-select
+	solc-select install 0.8.17
 
 build:
 	solc-select use 0.8.17
