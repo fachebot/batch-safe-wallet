@@ -12,7 +12,11 @@ import (
 const BatchSize = 2000
 
 func init() {
-	d := sqlite.Open("keys.db")
+	openDatabase("keys.db")
+}
+
+func openDatabase(path string) {
+	d := sqlite.Open(path)
 	db, err := gorm.Open(d, &gorm.Config{
 		Logger: logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags),
@@ -28,6 +32,7 @@ func init() {
 
 	state.Db = db
 	if db.Migrator().HasTable(Key{}) {
+		db.Migrator().AutoMigrate(Key{})
 		return
 	}
 

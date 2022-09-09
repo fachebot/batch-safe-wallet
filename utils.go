@@ -1,27 +1,32 @@
 package main
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"strings"
 )
 
-func IsBeautifulAddress(address common.Address, long int, strict bool) bool {
-	curr := 1
-	count := 0
-	str := address.Hex()
+func IsBeautifulAddress(address string, length int, strict bool, maxOffset int) bool {
+	max := 1
+	count := 1
 	if !strict {
-		str = strings.ToLower(str)
+		address = strings.ToLower(address)
 	}
 
-	for i := 0; i < len(str)-1; i++ {
-		if str[i] == str[i+1] {
-			curr++
-		} else {
-			if curr > count && curr >= 2 {
-				count = curr
-			}
-			curr = 1
+	for i := 0; i < len(address)-1; i++ {
+		if address[i] == address[i+1] {
+			count++
+			continue
 		}
+
+		if (i+1)-count-maxOffset > 0 {
+			return false
+		} else if count-length >= 0 {
+			return true
+		}
+
+		if count > max && count >= 2 {
+			max = count
+		}
+		count = 1
 	}
-	return count >= long
+	return max >= length
 }
