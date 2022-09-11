@@ -10,6 +10,9 @@ func IsBeautifulAddress(address string, length int, strict bool, maxOffset int) 
 	if !strict {
 		address = strings.ToLower(address)
 	}
+	if strings.HasPrefix(address, "0x") {
+		address = address[2:]
+	}
 
 	for i := 0; i < len(address)-1; i++ {
 		if address[i] == address[i+1] {
