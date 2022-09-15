@@ -73,7 +73,7 @@ func BatchCreateAccounts(c *grumble.Context) error {
 		length = 5
 	}
 	maxOffset := c.Args.Int("maxOffset")
-	if maxOffset <= 0 {
+	if maxOffset < 0 {
 		maxOffset = 1
 	}
 
@@ -139,7 +139,7 @@ func FilterBeautifulAddresses(c *grumble.Context) error {
 		length = 5
 	}
 	maxOffset := c.Args.Int("maxOffset")
-	if maxOffset <= 0 {
+	if maxOffset < 0 {
 		maxOffset = 1
 	}
 	addressType := c.Args.String("type")
