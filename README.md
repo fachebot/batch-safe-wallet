@@ -1,5 +1,5 @@
 # batch-safe-wallet
-批量生成以太坊多签合约地址
+批量生成以太坊多签合约地址，使用案例：[[教程] Gnosis Safe多签钱包生成靓号地址](https://mirror.xyz/dashboard/edit/vFmUB38YSjJS5AKTVpLVST2sUSpnENUkGo01oVM7nrk)
 
 ## 编译程序
 ```bash
