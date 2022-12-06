@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/desertbit/grumble"
-	"github.com/olekukonko/tablewriter"
 	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/desertbit/grumble"
+	"github.com/olekukonko/tablewriter"
 )
 
 var app = grumble.New(&grumble.Config{
@@ -22,21 +23,15 @@ var app = grumble.New(&grumble.Config{
 
 func init() {
 	app.AddCommand(&grumble.Command{
-		Name: "deploy",
-		Help: "部署多签合约",
-		Args: func(a *grumble.Args) {
-			a.String("path", "数据库路径", grumble.Default("keys.db"))
-		},
-		Run: BatchCreateAccounts,
-	})
-
-	app.AddCommand(&grumble.Command{
 		Name: "batch",
 		Help: "批量生成地址",
 		Args: func(a *grumble.Args) {
 			a.Int("count", "生成地址数量", grumble.Default(1000))
 			a.Int("length", "连续字符长度", grumble.Default(5))
 			a.Int("maxOffset", "最大起始位置偏移", grumble.Default(1))
+		},
+		Flags: func(f *grumble.Flags) {
+			f.StringL("type", "evm", "地址类型(evm/tron)")
 		},
 		Run: BatchCreateAccounts,
 	})
@@ -76,6 +71,7 @@ func BatchCreateAccounts(c *grumble.Context) error {
 	if maxOffset < 0 {
 		maxOffset = 1
 	}
+	keyType := c.Flags.String("type")
 
 	// 生成地址
 	var stopped int32
@@ -83,7 +79,7 @@ func BatchCreateAccounts(c *grumble.Context) error {
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			for atomic.LoadInt32(&stopped) == 0 {
-				key, err := NewKey()
+				key, err := NewKey(keyType)
 				if err != nil {
 					panic(err)
 				}

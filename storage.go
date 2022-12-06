@@ -1,12 +1,13 @@
 package main
 
 import (
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"time"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 const BatchSize = 2000
@@ -32,7 +33,10 @@ func openDatabase(path string) {
 
 	state.Db = db
 	if db.Migrator().HasTable(Key{}) {
-		db.Migrator().AutoMigrate(Key{})
+		err := db.Migrator().AutoMigrate(Key{})
+		if err != nil {
+			panic(err)
+		}
 		return
 	}
 
