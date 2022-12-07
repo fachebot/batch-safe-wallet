@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func IsBeautifulAddress(address string, length int, strict bool, maxOffset int) bool {
+func IsVanityAddress(address string, length int, strict bool, maxOffset int) bool {
 	max := 1
 	count := 1
 	if !strict {

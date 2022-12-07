@@ -13,10 +13,10 @@ import (
 )
 
 type Key struct {
-	ID         uint   `gorm:"column:id;primarykey"`
-	Address    string `gorm:"column:address;index;not null"`
-	Contract   string `gorm:"column:contract;not null"`
-	PrivateKey string `gorm:"column:privateKey;not null"`
+	ID         uint   `gorm:"column:id;primarykey" json:"id"`
+	Address    string `gorm:"column:address;index;not null" json:"address"`
+	Contract   string `gorm:"column:contract;not null" json:"contract"`
+	PrivateKey string `gorm:"column:privateKey;not null" json:"private_key"`
 }
 
 func (Key) TableName() string {
@@ -73,11 +73,11 @@ func NewTronKey() (Key, error) {
 }
 
 type Create2Key struct {
-	ID        uint   `gorm:"column:id;primarykey"`
-	Address   string `gorm:"column:address;index;not null"`
-	Contract  string `gorm:"column:contract;not null"`
-	SaltNonce uint64 `gorm:"column:salt_nonce;not null"`
-	InitHash  string `gorm:"column:init_hash;not null"`
+	ID        uint   `gorm:"column:id;primarykey" json:"id"`
+	Address   string `gorm:"column:address;index;not null" json:"-"`
+	Contract  string `gorm:"column:contract;not null" json:"contract"`
+	SaltNonce uint64 `gorm:"column:salt_nonce;not null" json:"salt_nonce"`
+	InitHash  string `gorm:"column:init_hash;not null" json:"-"`
 }
 
 func NewCreate2Key(deployer common.Address, initHash common.Hash, saltNonce uint64) (Create2Key, error) {

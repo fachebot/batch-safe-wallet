@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,11 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/desertbit/grumble"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/olekukonko/tablewriter"
+	"gorm.io/gorm"
 )
 
 var app = grumble.New(&grumble.Config{
@@ -27,6 +27,15 @@ var app = grumble.New(&grumble.Config{
 })
 
 func init() {
+	app.AddCommand(&grumble.Command{
+		Name: "load",
+		Help: "加载地址数据库",
+		Args: func(a *grumble.Args) {
+			a.String("path", "数据库路径", grumble.Default("keys.db"))
+		},
+		Run: LoadKeysDatabase,
+	})
+
 	app.AddCommand(&grumble.Command{
 		Name: "batch",
 		Help: "批量生成地址",
@@ -70,17 +79,24 @@ func init() {
 		Flags: func(f *grumble.Flags) {
 			f.BoolL("create2", false, "create2方式创建的地址")
 		},
-		Run: FilterBeautifulAddresses,
+		Run: FilterVanityAddresses,
 	})
 
 	app.AddCommand(&grumble.Command{
-		Name: "load",
-		Help: "加载地址数据库",
-		Args: func(a *grumble.Args) {
-			a.String("path", "数据库路径", grumble.Default("keys.db"))
+		Name: "export",
+		Help: "导出靓号地址",
+		Flags: func(f *grumble.Flags) {
+			f.Uint64L("skip", 0, "跳过记录数量")
+			f.BoolL("create2", false, "create2方式创建的地址")
 		},
-		Run: LoadKeysDatabase,
+		Run: ExportVanityAddresses,
 	})
+}
+
+// LoadKeysDatabase 加载地址数据库
+func LoadKeysDatabase(c *grumble.Context) error {
+	openDatabase(c.Args.String("path"))
+	return nil
 }
 
 // BatchCreateAccounts 批量创建账户
@@ -111,8 +127,8 @@ func BatchCreateAccounts(c *grumble.Context) error {
 					panic(err)
 				}
 
-				if !IsBeautifulAddress(key.Address, length, false, maxOffset) &&
-					!IsBeautifulAddress(key.Contract, length, false, maxOffset) {
+				if !IsVanityAddress(key.Address, length, false, maxOffset) &&
+					!IsVanityAddress(key.Contract, length, false, maxOffset) {
 					continue
 				}
 
@@ -196,8 +212,8 @@ func BatchCreate2Accounts(c *grumble.Context) error {
 					panic(err)
 				}
 
-				if !IsBeautifulAddress(key.Address, length, true, maxOffset) &&
-					!IsBeautifulAddress(key.Contract, length, true, maxOffset) {
+				if !IsVanityAddress(key.Address, length, true, maxOffset) &&
+					!IsVanityAddress(key.Contract, length, true, maxOffset) {
 					continue
 				}
 
@@ -240,8 +256,8 @@ func BatchCreate2Accounts(c *grumble.Context) error {
 	return nil
 }
 
-// FilterBeautifulAddresses 筛选靓号地址
-func FilterBeautifulAddresses(c *grumble.Context) error {
+// FilterVanityAddresses 筛选靓号地址
+func FilterVanityAddresses(c *grumble.Context) error {
 	length := c.Args.Int("length")
 	if length <= 0 {
 		length = 5
@@ -262,10 +278,69 @@ func FilterBeautifulAddresses(c *grumble.Context) error {
 	return renderCreate2Addresses(addressType, length, maxOffset)
 }
 
-// LoadKeysDatabase 加载地址数据库
-func LoadKeysDatabase(c *grumble.Context) error {
-	openDatabase(c.Args.String("path"))
-	return nil
+// ExportVanityAddresses 导出靓号地址
+func ExportVanityAddresses(c *grumble.Context) error {
+	skip := c.Flags.Uint64("skip")
+
+	if !c.Flags.Bool("create2") {
+		return exportAddresses(skip)
+	}
+
+	return exportCreate2Addresses(skip)
+}
+
+func exportAddresses(skip uint64) error {
+	offset := int(skip)
+	const limit = BatchSize
+	result := make([]Key, 0)
+
+	for {
+		keys, err := Keys{}.Scan(offset, limit)
+		if err != nil {
+			return err
+		}
+
+		result = append(result, keys...)
+
+		if len(keys) < limit {
+			break
+		}
+		offset += len(keys)
+	}
+
+	data, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile("exportAddresses.json", data, 0660)
+}
+
+func exportCreate2Addresses(skip uint64) error {
+	offset := int(skip)
+	const limit = BatchSize
+	result := make([]Create2Key, 0)
+
+	for {
+		keys, err := Create2Keys{}.Scan(offset, limit)
+		if err != nil {
+			return err
+		}
+
+		result = append(result, keys...)
+
+		if len(keys) < limit {
+			break
+		}
+		offset += len(keys)
+	}
+
+	data, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile("exportCreate2Addresses.json", data, 0660)
 }
 
 func renderAddresses(addressType string, length, maxOffset int) error {
@@ -280,13 +355,13 @@ func renderAddresses(addressType string, length, maxOffset int) error {
 
 		if addressType == "address" {
 			for _, key := range keys {
-				if IsBeautifulAddress(key.Address, length, true, maxOffset) {
+				if IsVanityAddress(key.Address, length, true, maxOffset) {
 					table.Append([]string{key.Address, key.Contract, key.PrivateKey})
 				}
 			}
 		} else {
 			for _, key := range keys {
-				if IsBeautifulAddress(key.Contract, length, true, maxOffset) {
+				if IsVanityAddress(key.Contract, length, true, maxOffset) {
 					table.Append([]string{key.Address, key.Contract, key.PrivateKey})
 				}
 			}
@@ -315,13 +390,13 @@ func renderCreate2Addresses(addressType string, length, maxOffset int) error {
 
 		if addressType == "address" {
 			for _, key := range keys {
-				if IsBeautifulAddress(key.Address, length, true, maxOffset) {
+				if IsVanityAddress(key.Address, length, true, maxOffset) {
 					table.Append([]string{key.Address, key.Contract, strconv.FormatUint(key.SaltNonce, 10), key.InitHash})
 				}
 			}
 		} else {
 			for _, key := range keys {
-				if IsBeautifulAddress(key.Contract, length, true, maxOffset) {
+				if IsVanityAddress(key.Contract, length, true, maxOffset) {
 					table.Append([]string{key.Address, key.Contract, strconv.FormatUint(key.SaltNonce, 10), key.InitHash})
 				}
 			}
