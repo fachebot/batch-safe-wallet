@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"runtime"
 	"strconv"
@@ -60,6 +61,7 @@ func init() {
 			a.Uint64("saltNonce", "起始nonce位置", grumble.Default(uint64(0)))
 		},
 		Flags: func(f *grumble.Flags) {
+			f.IntL("chain", 1, "链ID")
 			f.IntL("batchSize", 100, "批次大小")
 			f.IntL("count", 1000, "生成地址数量")
 			f.IntL("length", 5, "连续字符长度")
@@ -190,6 +192,7 @@ func BatchCreate2Accounts(c *grumble.Context) error {
 		maxOffset = 1
 	}
 	batchSize := c.Flags.Int("batchSize")
+	chain := big.NewInt(int64(c.Flags.Int("chain")))
 
 	if saltNonce == 0 {
 		var err error
@@ -207,7 +210,7 @@ func BatchCreate2Accounts(c *grumble.Context) error {
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			for atomic.LoadInt32(&stopped) == 0 {
-				key, err := NewCreate2Key(deployer, initHash, atomic.AddUint64(&saltNonce, 1))
+				key, err := NewCreate2Key(deployer, initHash, chain, atomic.AddUint64(&saltNonce, 1))
 				if err != nil {
 					panic(err)
 				}
