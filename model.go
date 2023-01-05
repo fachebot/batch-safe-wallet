@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
@@ -79,6 +78,7 @@ type Create2Key struct {
 	ID        uint   `gorm:"column:id;primarykey" json:"id"`
 	Address   string `gorm:"column:address;index;not null" json:"-"`
 	Contract  string `gorm:"column:contract;not null" json:"contract"`
+	ChainId   uint64 `gorm:"column:chain_id;not null" json:"chain_id"`
 	SaltNonce uint64 `gorm:"column:salt_nonce;not null" json:"salt_nonce"`
 	InitHash  string `gorm:"column:init_hash;not null" json:"-"`
 }
@@ -94,7 +94,12 @@ func NewCreate2Key(deployer common.Address, initHash common.Hash, chain *big.Int
 	)
 	copy(salt[:], hash)
 	address := crypto.CreateAddress2(deployer, salt, initHash.Bytes())
-	fmt.Println("=====================>", chain.String(), saltNonce, hex.EncodeToString(salt[:]))
 
-	return Create2Key{Address: deployer.Hex(), Contract: address.Hex(), SaltNonce: saltNonce, InitHash: initHash.Hex()}, nil
+	return Create2Key{
+		Address:   deployer.Hex(),
+		Contract:  address.Hex(),
+		ChainId:   chain.Uint64(),
+		SaltNonce: saltNonce,
+		InitHash:  initHash.Hex(),
+	}, nil
 }
